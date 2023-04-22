@@ -1,11 +1,5 @@
 // *** CURRENT TASKS ***
 
-// TODO The computer will now place multiple ships in this format:
-  // TODO One two-unit ship
-  // TODO Two three-unit ships
-  // TODO One four-unit ship
-  // TODO One five-unit ship
-
 // TODO Keep in mind that your code cannot place two ships on intersecting paths
 // TODO Ship placement should be random (horizontally and vertically placed) and not manually placed by you in the code
 // TODO Ships must be placed within the grid boundaries
@@ -18,8 +12,6 @@
 //-----------------------------------------------------------------------------
 // *** FUTURE TASKS ***
 
-// TODO Randomly place 2 battleships on game board:
-  // // TODO Generate a random starting position for each ship on the board. You can use the Math.random() function to generate a random index for the row and column of the starting tile.
 
   // TODO Check if the ship can fit within the boundaries of the board from its starting position. For example, if the ship is of length 4 and its starting position is [2, 5], then you should check if there are 4 tiles horizontally or vertically from this position on the board.
 
@@ -33,6 +25,13 @@ function startGame() {
   rs.keyIn('Press any key to start the game. ',
     {hideEchoBack:true,mask:""}
   );
+  const game = new Game(gameSettings);
+  console.log(game.fleet);
+  let fleetHealth = game.fleet.totalHealth;
+  while (fleetHealth > 0) {
+    playGame(game);
+    fleetHealth = game.fleet.totalHealth; 
+  }
 }
 
 function createGameBoard(size) {
@@ -42,50 +41,54 @@ function createGameBoard(size) {
 }
 
 class Game {
-  constructor(settings) {
-    this.settings = settings;
-    this.gameBoard = createGameBoard(settings.boardSize);
-    this.fleet = new Fleet(settings.shipsByType, this);
+  constructor() {
+    this.gameBoard = new createGameBoard(gameSettings.boardSize);
+    this.fleet = new Fleet(gameSettings, this);
+    this.numShips = gameSettings.numShips;
     this.guesses = [];
   }
 
-  takeTurn(playerInput) { // flag to check if a ship was hit
+  playerTurn(playerInput) {
     playerInput = playerInput.toUpperCase();
     let healthRemaining = this.fleet.ships.length;
     let hitShip = false;
-    
+
     for (let i = 0; i < healthRemaining; i++) {
       let ship = this.fleet.ships[i];
-      
+
       if (ship.position === playerInput) {
         if (ship.hit) {
           console.log(`You have already sunk this battleship!`);
           return;
         }
-        
+
         ship.hit = true;
         this.fleet.totalHealth--;
         hitShip = true;
-        
+
         if (this.fleet.totalHealth > 0) {
           console.log(`Hit. You have sunk a battleship. ${this.fleet.totalHealth} ships remaining.`);
         } else {
           console.log(`Hit. You have sunk all battleships!`);
         }
-        
+
         break; // exit loop once a ship has been hit
       }
-      
-      if (this.inputHistory.includes(playerInput)) {
+    }
+
+    if (!hitShip) {
+      if (this.guesses.includes(playerInput)) {
         console.log(`You have already picked this location. Miss!`);
         return;
       }
-    }
-    
-    if (!hitShip) {
+
       console.log(`You have missed!`);
-      this.inputHistory.push(playerInput);
+      this.guesses.push(playerInput);
     }
+  }
+
+  isGameOver() {
+    return this.fleet.totalHealth === 0;
   }
 }
 
@@ -97,19 +100,17 @@ class Ship {
   }
 }
 
-const availableShipTypes = {
-  1: {shipType: 'Destroyer', length: 2},
-  2: {shipType: 'Submarine', length: 3},
-  3: {shipType: 'Cruiser', length: 3},
-  4: {shipType: 'Battleship', length: 4},
-  5: {shipType: 'Carrier', length: 5},
-};
-
 class Fleet {
-  constructor(game) {
+  constructor(gameSettings, game) {
     this.ships = [];
     this.totalHealth = 0;
     this.game = game;
+    for (let shipType of gameSettings.shipsByType) {
+      const enlistShip = gameSettings.availableShipTypes[Object.keys(shipType)[0]];
+      for (let i = 0; i < shipType[Object.keys(shipType)[0]]; i++) {
+        this.ships.push(new Ship(enlistShip.length, this.getRandomTile()));
+      }
+    }
   }
 
   getRandomTile() {
@@ -123,11 +124,35 @@ class Fleet {
 
   addShip(shipType) {
     const { length } = availableShipTypes[shipType];
-    const numShipsToAdd = this.game.settings.shipsByType[shipType];
-    for (let i = 0; i < numShipsToAdd; i++) {
-      const ship = new Ship(length, this.getRandomTile());
-      this.ships.push(ship);
-      this.totalHealth += length;
+    const ship = new Ship(length, this.getRandomTile());
+    this.ships.push(ship);
+    this.totalHealth += length;
+  }
+
+  placeShips(board) {
+    for (const ship of this.ships) {
+      const { size } = ship;
+      let isValidPosition = false;
+      let positions = [];
+
+      while (!isValidPosition) {
+        const startRow = Math.floor(Math.random() * board.grid.length);
+        const startCol = Math.floor(Math.random() * board.grid[0].length);
+        const orientation = Math.random() < 0.5 ? 'horizontal' : 'vertical';
+        positions = board.getShipPositions(startRow, startCol, size, orientation);
+
+        isValidPosition = positions.every((pos) => {
+          const [row, col] = pos;
+          return board.grid[row][col] === BoardTile.Empty;
+        });
+      }
+
+      for (const pos of positions) {
+        const [row, col] = pos;
+        board.placeShip(row, col, ship);
+      }
+
+      ship.position = positions;
     }
   }
 
@@ -149,49 +174,47 @@ class Fleet {
 }
 
 function playGame(game) {
-  console.log(game.fleet);
-  let playerInput = rs.question("Enter a location to strike i.e. 'A2': ", {
-      limit: /^[a-cA-C][1-3]$/,
+  while (!game.isGameOver()) {
+    let playerInput = rs.question("Enter a location to strike i.e. 'A2': ", {
+      limit: /^[a-jA-J]([0-9]|10)$/,
       limitMessage: 'Sorry, $<lastInput> is not allowed.'
-  });
+    });
 
-  game.takeTurn(playerInput);
+    game.playerTurn(playerInput);
+  }
 
-  if (game.fleet.totalHealth === 0) {
-    const repeat = rs.keyInYN('Would you like to play again? ');
+  const repeat = rs.keyInYN('Would you like to play again? ');
 
-    if (repeat) {
-      startGame();
-      game.reset();
-    } else {
-      console.log('Thanks for playing!');
-      process.exit();
-    }
+  if (repeat) {
+    game.reset();
+    startGame();
+  } else {
+    console.log('Thanks for playing!');
+    process.exit();
   }
 }
+
 // *** SET UP GAME ***
 
 const gameSettings = {
   numShips: 5, // total number of ships in the fleet
-  shipsByType: {
-    1: 1, // number of destroyers
-    2: 1, // number of submarines
-    3: 1, // number of cruisers
-    4: 1, // number of battleships
-    5: 1 // number of carriers
-  },
+  shipsByType: [
+    {1: 1}, // destroyers: number of
+    {2: 1}, // submarines: number of
+    {3: 1}, // cruisers: number of
+    {4: 1}, // battleships: number of
+    {5: 1}, // carriers: number of
+  ],
   boardSize: 10,
+  availableShipTypes: {
+  1: {shipType: 'Destroyer', length: 2},
+  2: {shipType: 'Submarine', length: 3},
+  3: {shipType: 'Cruiser', length: 3},
+  4: {shipType: 'Battleship', length: 4},
+  5: {shipType: 'Carrier', length: 5},
+  }
 };
 
 // *** RUN THE GAME ***
 
-
-while (true) {
   startGame();
-  const game = new Game(gameSettings);
-  let fleetHealth = game.fleet.totalHealth;
-  while (fleetHealth > 0) {
-    playGame(game);
-    fleetHealth = game.fleet.totalHealth; 
-  }
-}
