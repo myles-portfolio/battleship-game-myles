@@ -41,20 +41,10 @@ function createGameBoard(size) {
   );
 }
 class Game {
-  constructor(boardSize, buildFleetFunc) {
+  constructor(boardSize, fleetSizes) {
     this.board = new createGameBoard(boardSize);
-    this.buildFleet = buildFleetFunc; // pass the buildFleet function as an argument
-    this.fleet = this.buildFleet(this); // call the buildFleet function with the current game instance as an argument
-  }
-
-  buildFleet() {
-    const fleet = [];
-    this.ships.push(new Ship(2));
-    this.ships.push(new Ship(3));
-    this.ships.push(new Ship(3));
-    this.ships.push(new Ship(4));
-    this.ships.push(new Ship(5));
-    return fleet;
+    this.fleet = new Fleet().buildFleet(fleetSizes);
+    this.guesses = [];
   }
 
   takeTurn(playerInput) { // flag to check if a ship was hit
@@ -106,16 +96,19 @@ class Ship {
 }
 
 class Fleet {
-  constructor(shipSizes, game) {
+  constructor(game) {
     this.ships = [];
     this.totalHealth = 0;
     this.game = game;
-    for (let i = 0; i < shipSizes.length; i++) {
-      const ship = new Ship(shipSizes[i]);
-      this.ships.push(ship);
-      this.totalHealth += shipSizes[i];
-      this.placeShip(ship);
-    }
+  }
+
+  buildFleet(fleetSizes) {
+    let fleet = [];
+    fleetSizes.forEach((shipLength) => {
+      let ship = new Ship(shipLength);
+      fleet.push(ship);
+    });
+    return fleet;
   }
 
   getRandomStartTile(shipLength) {
@@ -199,7 +192,8 @@ function playGame(game) {
 
 while (true) {
   startGame();
-  const game = new Game(10, buildFleet);
+  const game = new Game(10, [2, 3, 3, 4, 5]);
+  console.log(game.fleet);
   let fleetHealth = game.fleet.totalHealth;
   while (fleetHealth > 0) {
     playGame(game);
