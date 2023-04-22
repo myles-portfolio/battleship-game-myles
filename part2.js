@@ -42,14 +42,11 @@ function createGameBoard(size) {
 }
 
 class Game {
-  constructor(size, numShips, shipLength) {
-    this.gameBoard = createGameBoard(size);
-    this.fleet = new Fleet(numShips, shipLength, this);
-    
-    for (let i = 0; i < numShips; i++) {
-      this.fleet.addShip(shipLength, this);
-    }
-    this.inputHistory = [];
+  constructor(settings) {
+    this.settings = settings;
+    this.gameBoard = createGameBoard(settings.boardSize);
+    this.fleet = new Fleet(settings.shipsByType, this);
+    this.guesses = [];
   }
 
   takeTurn(playerInput) { // flag to check if a ship was hit
@@ -100,8 +97,16 @@ class Ship {
   }
 }
 
+const availableShipTypes = {
+  1: {shipType: 'Destroyer', length: 2},
+  2: {shipType: 'Submarine', length: 3},
+  3: {shipType: 'Cruiser', length: 3},
+  4: {shipType: 'Battleship', length: 4},
+  5: {shipType: 'Carrier', length: 5},
+};
+
 class Fleet {
-  constructor(numShips, shipLength, game) {
+  constructor(game) {
     this.ships = [];
     this.totalHealth = 0;
     this.game = game;
@@ -116,10 +121,14 @@ class Fleet {
     return randomTile;
   }
 
-  addShip(length) {
-    const ship = new Ship(length, this.getRandomTile());
-    this.ships.push(ship);
-    this.totalHealth += length;
+  addShip(shipType) {
+    const { length } = availableShipTypes[shipType];
+    const numShipsToAdd = this.game.settings.shipsByType[shipType];
+    for (let i = 0; i < numShipsToAdd; i++) {
+      const ship = new Ship(length, this.getRandomTile());
+      this.ships.push(ship);
+      this.totalHealth += length;
+    }
   }
 
   removeShip(ship) {
@@ -160,14 +169,26 @@ function playGame(game) {
     }
   }
 }
+// *** SET UP GAME ***
 
+const gameSettings = {
+  numShips: 5, // total number of ships in the fleet
+  shipsByType: {
+    1: 1, // number of destroyers
+    2: 1, // number of submarines
+    3: 1, // number of cruisers
+    4: 1, // number of battleships
+    5: 1 // number of carriers
+  },
+  boardSize: 10,
+};
 
 // *** RUN THE GAME ***
 
 
 while (true) {
   startGame();
-  const game = new Game(10, 2, 1);
+  const game = new Game(gameSettings);
   let fleetHealth = game.fleet.totalHealth;
   while (fleetHealth > 0) {
     playGame(game);
