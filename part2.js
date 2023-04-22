@@ -42,29 +42,20 @@ function createGameBoard(size) {
 }
 
 class Game {
-  constructor(size, numShips, shipLength) {
+  constructor(size) {
     this.gameBoard = createGameBoard(size);
-    this.fleet = new Fleet(numShips, shipLength, this);
-    
-    for (let i = 0; i < numShips; i++) {
-      this.fleet.addShip(shipLength, this);
-    }
+    this.fleet = buildFleet(this)
     this.inputHistory = [];
   }
 
   buildFleet() {
+    const fleet = [];
     this.ships.push(new Ship(2));
     this.ships.push(new Ship(3));
     this.ships.push(new Ship(3));
     this.ships.push(new Ship(4));
     this.ships.push(new Ship(5));
-
-    for (let i = 0; i < this.ships.length; i++) {
-      let ship = this.ships[i];
-      let position = this.gameBoard.getValidRandomPosition(ship.length);
-
-      this.gameBoard.placeShip(ship, position);
-    }
+    return fleet;
   }
 
   takeTurn(playerInput) { // flag to check if a ship was hit
@@ -116,25 +107,51 @@ class Ship {
 }
 
 class Fleet {
-  constructor(numShips, shipLength, game) {
+  constructor(shipSizes, game) {
     this.ships = [];
     this.totalHealth = 0;
     this.game = game;
+    for (let i = 0; i < shipSizes.length; i++) {
+      const ship = new Ship(shipSizes[i]);
+      this.ships.push(ship);
+      this.totalHealth += shipSizes[i];
+      this.placeShip(ship);
+    }
   }
 
-  getRandomTile() {
-    const oceanArray = this.game.gameBoard;
-    const randomSubArrayIndex = Math.floor(Math.random() * oceanArray.length);
-    const randomElementIndex = Math.floor(Math.random() * oceanArray[randomSubArrayIndex].length);
-    let randomTile = oceanArray[randomSubArrayIndex][randomElementIndex];
-    oceanArray[randomSubArrayIndex].splice(randomElementIndex, 1);
-    return randomTile;
+  getRandomStartTile(shipLength) {
+    const maxRow = this.size - shipLength + 1;
+    const maxCol = this.size - shipLength + 1;
+    const row = Math.floor(Math.random() * maxRow);
+    const col = Math.floor(Math.random() * maxCol);
+    return [row, col];
   }
 
-  addShip(length) {
-    const ship = new Ship(length, this.getRandomTile());
-    this.ships.push(ship);
-    this.totalHealth += length;
+  placeShip(ship) {
+    let [row, col] = this.getRandomStartTile(ship.length);
+    let direction = Math.random() < 0.5 ? 'horizontal' : 'vertical';
+
+    if (direction === 'horizontal') {
+      if (this.checkHorizontal(row, col, ship.length)) {
+        for (let i = col; i < col + ship.length; i++) {
+          this.tiles[row][i] = 'ship';
+        }
+        ship.position = [row, col];
+      } else {
+        this.placeShip(ship);
+      }
+    } else {
+      if (this.checkVertical(row, col, ship.length)) {
+        for (let i = row; i < row + ship.length; i++) {
+          this.tiles[i][col] = 'ship';
+        }
+        ship.position = [row, col];
+      } else {
+        this.placeShip(ship);
+      }
+    }
+
+    this.fleet.totalHealth += ship.length;
   }
 
   removeShip(ship) {
@@ -183,7 +200,7 @@ function playGame(game) {
 
 while (true) {
   startGame();
-  const game = new Game(10, 2, 1);
+  const game = new Game(10);
   let fleetHealth = game.fleet.totalHealth;
   while (fleetHealth > 0) {
     playGame(game);
