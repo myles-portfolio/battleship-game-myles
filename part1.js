@@ -14,6 +14,8 @@
 
   // TODO If the ship fits within the boundaries of the board, check if it overlaps with any existing ships on the board. You can do this by checking if any of the tiles that the ship will occupy are already occupied by another ship.
 
+  // TODO Setup a more robust player prompt for hit event, as once longer ships are added to the game board, the player may not always sink the ship.
+
 var rs = require('readline-sync');
 
 function startGame() {
