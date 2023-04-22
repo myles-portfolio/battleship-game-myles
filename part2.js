@@ -52,6 +52,21 @@ class Game {
     this.inputHistory = [];
   }
 
+  buildFleet() {
+    this.ships.push(new Ship(2));
+    this.ships.push(new Ship(3));
+    this.ships.push(new Ship(3));
+    this.ships.push(new Ship(4));
+    this.ships.push(new Ship(5));
+
+    for (let i = 0; i < this.ships.length; i++) {
+      let ship = this.ships[i];
+      let position = this.gameBoard.getValidRandomPosition(ship.length);
+
+      this.gameBoard.placeShip(ship, position);
+    }
+  }
+
   takeTurn(playerInput) { // flag to check if a ship was hit
     playerInput = playerInput.toUpperCase();
     let healthRemaining = this.fleet.ships.length;
@@ -146,6 +161,7 @@ function playGame(game) {
       limitMessage: 'Sorry, $<lastInput> is not allowed.'
   });
 
+  this.buildFleet();
   game.takeTurn(playerInput);
 
   if (game.fleet.totalHealth === 0) {
