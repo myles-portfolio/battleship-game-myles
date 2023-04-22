@@ -119,8 +119,7 @@ function playGame(game) {
   game.takeTurn(playerInput);
 
   if (game.fleet.totalHealth === 0) {
-    console.log(`Hit. You have sunk all battleships!`);
-    const repeat = rs.keyInYN('You have destroyed all battleships. Would you like to play again? ');
+    const repeat = rs.keyInYN('Would you like to play again? ');
 
     if (repeat) {
       startGame();
