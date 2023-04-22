@@ -16,37 +16,49 @@ class Game {
   constructor(size, numShips, shipLength) {
     this.gameBoard = createGameBoard(size);
     this.fleet = new Fleet(numShips, shipLength, this);
+    
     for (let i = 0; i < numShips; i++) {
       this.fleet.addShip(shipLength, this);
     }
+    this.inputHistory = [];
   }
 
-  takeTurn(playerInput) {
-    let doDamage = false; // flag to check if a ship was hit
+  takeTurn(playerInput) { // flag to check if a ship was hit
+    playerInput = playerInput.toUpperCase();
     let healthRemaining = this.fleet.ships.length;
-
+    let hitShip = false;
+    
     for (let i = 0; i < healthRemaining; i++) {
       let ship = this.fleet.ships[i];
+      
       if (ship.position === playerInput) {
-        if (!ship.hit) { // check if the ship has already been hit
-          doDamage = true;
-          ship.hit = true;
-          this.fleet.totalHealth--;
-          if (this.fleet.totalHealth > 1) {
-            console.log(`Hit. You have sunk a battleship. ${this.fleet.totalHealth} ships remaining.`);
-          } else if (this.fleet.totalHealth === 1) {
-            console.log(`Hit. You have sunk a battleship. 1 ship remaining.`);
-          }
-        } else {
-          doDamage = true;
-          console.log(`You have already picked this location. Miss!`);
+        if (ship.hit) {
+          console.log(`You have already sunk this battleship!`);
+          return;
         }
-        break;
+        
+        ship.hit = true;
+        this.fleet.totalHealth--;
+        hitShip = true;
+        
+        if (this.fleet.totalHealth > 0) {
+          console.log(`Hit. You have sunk a battleship. ${this.fleet.totalHealth} ships remaining.`);
+        } else {
+          console.log(`Hit. You have sunk all battleships!`);
+        }
+        
+        break; // exit loop once a ship has been hit
+      }
+      
+      if (this.inputHistory.includes(playerInput)) {
+        console.log(`You have already picked this location. Miss!`);
+        return;
       }
     }
-
-    if (!doDamage) {
+    
+    if (!hitShip) {
       console.log(`You have missed!`);
+      this.inputHistory.push(playerInput);
     }
   }
 }
@@ -67,11 +79,11 @@ class Fleet {
   }
 
   getRandomTile() {
-    const board = this.game.gameBoard;
-    const randomSubArrayIndex = Math.floor(Math.random() * board.length);
-    const randomElementIndex = Math.floor(Math.random() * board[randomSubArrayIndex].length);
-    let randomTile = board[randomSubArrayIndex][randomElementIndex];
-    board[randomSubArrayIndex].splice(randomElementIndex, 1);
+    const oceanArray = this.game.gameBoard;
+    const randomSubArrayIndex = Math.floor(Math.random() * oceanArray.length);
+    const randomElementIndex = Math.floor(Math.random() * oceanArray[randomSubArrayIndex].length);
+    let randomTile = oceanArray[randomSubArrayIndex][randomElementIndex];
+    oceanArray[randomSubArrayIndex].splice(randomElementIndex, 1);
     return randomTile;
   }
 
@@ -105,6 +117,19 @@ function playGame(game) {
   });
 
   game.takeTurn(playerInput);
+
+  if (game.fleet.totalHealth === 0) {
+    console.log(`Hit. You have sunk all battleships!`);
+    const repeat = rs.keyInYN('You have destroyed all battleships. Would you like to play again? ');
+
+    if (repeat) {
+      startGame();
+      game.reset();
+    } else {
+      console.log('Thanks for playing!');
+      process.exit();
+    }
+  }
 }
 
 
@@ -116,12 +141,7 @@ while (true) {
   const game = new Game(3, 2, 1);
   let fleetHealth = game.fleet.totalHealth;
   while (fleetHealth > 0) {
-    playGame(game); // Pass the game instance as an argument
-  }
-  const repeat = rs.keyInYN('You have destroyed all battleships. Would you like to play again? ');
-  if (!repeat) {
-    break;
+    playGame(game);
+    fleetHealth = game.fleet.totalHealth; 
   }
 }
-
-console.log('Thanks for playing!');
