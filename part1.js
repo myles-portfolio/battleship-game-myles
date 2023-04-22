@@ -20,6 +20,35 @@ class Game {
       this.fleet.addShip(shipLength, this);
     }
   }
+
+  takeTurn(playerInput) {
+    let doDamage = false; // flag to check if a ship was hit
+    let healthRemaining = this.fleet.ships.length;
+
+    for (let i = 0; i < healthRemaining; i++) {
+      let ship = this.fleet.ships[i];
+      if (ship.position === playerInput) {
+        if (!ship.hit) { // check if the ship has already been hit
+          doDamage = true;
+          ship.hit = true;
+          this.fleet.totalHealth--;
+          if (this.fleet.totalHealth > 1) {
+            console.log(`Hit. You have sunk a battleship. ${this.fleet.totalHealth} ships remaining.`);
+          } else if (this.fleet.totalHealth === 1) {
+            console.log(`Hit. You have sunk a battleship. 1 ship remaining.`);
+          }
+        } else {
+          doDamage = true;
+          console.log(`You have already picked this location. Miss!`);
+        }
+        break;
+      }
+    }
+
+    if (!doDamage) {
+      console.log(`You have missed!`);
+    }
+  }
 }
 
 class Ship {
@@ -69,47 +98,13 @@ class Fleet {
   }
 }
 
-function checkForShip(game, playerInput) {
-  for (let i = 0; i < game.fleet.ships.length; i++) {
-    let ship = game.fleet.ships[i];
-    if (ship.position === playerInput) {
-      return ship;
-    }
-  }
-  return null;
-}
-
 function playGame(game) {
   let playerInput = rs.question("Enter a location to strike i.e. 'A2': ", {
       limit: /^[a-cA-C][1-3]$/,
       limitMessage: 'Sorry, $<lastInput> is not allowed.'
   });
 
-  let doDamage = false; // flag to check if a ship was hit
-
-  for (let i = 0; i < game.fleet.ships.length; i++) {
-    let ship = game.fleet.ships[i];
-    if (ship.position === playerInput) {
-      if (!ship.hit) { // check if the ship has already been hit
-        doDamage = true;
-        ship.hit = true;
-        game.fleet.totalHealth--;
-        if (game.fleet.totalHealth > 1) {
-          console.log(`Hit. You have sunk a battleship. ${game.fleet.totalHealth} ships remaining.`);
-        } else if (game.fleet.totalHealth === 1) {
-          console.log(`Hit. You have sunk a battleship. 1 ship remaining.`);
-        }
-      } else {
-        doDamage = true;
-        console.log(`You have already picked this location. Miss!`);
-      }
-      break;
-    }
-  }
-
-  if (!doDamage) {
-    console.log(`You have missed!`);
-  }
+  game.takeTurn(playerInput);
 }
 
 
@@ -119,7 +114,8 @@ function playGame(game) {
 while (true) {
   startGame();
   const game = new Game(3, 2, 1);
-  while (game.fleet.totalHealth > 0) {
+  let fleetHealth = game.fleet.totalHealth;
+  while (fleetHealth > 0) {
     playGame(game); // Pass the game instance as an argument
   }
   const repeat = rs.keyInYN('You have destroyed all battleships. Would you like to play again? ');
