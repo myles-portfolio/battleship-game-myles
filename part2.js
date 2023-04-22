@@ -40,12 +40,11 @@ function createGameBoard(size) {
     Array.from({ length: size }, (_, col) => `${String.fromCharCode(65 + row)}${col + 1}`)
   );
 }
-
 class Game {
-  constructor(size) {
-    this.gameBoard = createGameBoard(size);
-    this.fleet = buildFleet(this)
-    this.inputHistory = [];
+  constructor(boardSize, buildFleetFunc) {
+    this.board = new createGameBoard(boardSize);
+    this.buildFleet = buildFleetFunc; // pass the buildFleet function as an argument
+    this.fleet = this.buildFleet(this); // call the buildFleet function with the current game instance as an argument
   }
 
   buildFleet() {
@@ -200,7 +199,7 @@ function playGame(game) {
 
 while (true) {
   startGame();
-  const game = new Game(10);
+  const game = new Game(10, buildFleet);
   let fleetHealth = game.fleet.totalHealth;
   while (fleetHealth > 0) {
     playGame(game);
