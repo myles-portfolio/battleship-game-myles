@@ -1,21 +1,3 @@
-// *** CURRENT TASKS ***
-
-  // TODO If the ship does not overlap with any existing ships, update the position key of the ship object to include all the tiles that the ship will occupy on the board.
-
-  // TODO If the ship does overlap with an existing ship or does not fit within the boundaries of the board, generate a new random starting position for the ship and repeat the process from step 2.
-
-//-----------------------------------------------------------------------------
-// *** FUTURE TASKS ***
-
-// TODO Randomly place 2 battleships on game board:
-  // // TODO Generate a random starting position for each ship on the board. You can use the Math.random() function to generate a random index for the row and column of the starting tile.
-
-  // TODO Check if the ship can fit within the boundaries of the board from its starting position. For example, if the ship is of length 4 and its starting position is [2, 5], then you should check if there are 4 tiles horizontally or vertically from this position on the board.
-
-  // TODO If the ship fits within the boundaries of the board, check if it overlaps with any existing ships on the board. You can do this by checking if any of the tiles that the ship will occupy are already occupied by another ship.
-
-  // TODO Setup a more robust player prompt for hit event, as once longer ships are added to the game board, the player may not always sink the ship.
-
 var rs = require('readline-sync');
 
 function startGame() {
@@ -24,15 +6,15 @@ function startGame() {
   );
 }
 
-function createGameBoard(rowSize, colSize) {
-  return Array.from({ length: rowSize }, (_, row) =>
-    Array.from({ length: colSize }, (_, col) => `${String.fromCharCode(65 + row)}${col + 1}`)
+function createGameBoard(size) {
+  return Array.from({ length: size }, (_, row) =>
+    Array.from({ length: size }, (_, col) => `${String.fromCharCode(65 + row)}${col + 1}`)
   );
 }
 
 class Game {
-  constructor(rowSize, colSize, numShips, shipLength) {
-    this.gameBoard = createGameBoard(rowSize, colSize);
+  constructor(size, numShips, shipLength) {
+    this.gameBoard = createGameBoard(size);
     this.fleet = new Fleet(numShips, shipLength, this);
     for (let i = 0; i < numShips; i++) {
       this.fleet.addShip(shipLength, this);
@@ -53,10 +35,6 @@ class Fleet {
     this.ships = [];
     this.totalHealth = 0;
     this.game = game;
-
-    for (let i = 0; i < numShips; i++) {
-      this.addShip(shipLength);
-    }
   }
 
   getRandomTile() {
@@ -64,6 +42,7 @@ class Fleet {
     const randomSubArrayIndex = Math.floor(Math.random() * board.length);
     const randomElementIndex = Math.floor(Math.random() * board[randomSubArrayIndex].length);
     let randomTile = board[randomSubArrayIndex][randomElementIndex];
+    board[randomSubArrayIndex].splice(randomElementIndex, 1);
     return randomTile;
   }
 
@@ -90,6 +69,15 @@ class Fleet {
   }
 }
 
+function checkForShip(game, playerInput) {
+  for (let i = 0; i < game.fleet.ships.length; i++) {
+    let ship = game.fleet.ships[i];
+    if (ship.position === playerInput) {
+      return ship;
+    }
+  }
+  return null;
+}
 
 function playGame(game) {
   let playerInput = rs.question("Enter a location to strike i.e. 'A2': ", {
@@ -97,12 +85,13 @@ function playGame(game) {
       limitMessage: 'Sorry, $<lastInput> is not allowed.'
   });
 
-  let hitShip = false; // flag to check if a ship was hit
+  let doDamage = false; // flag to check if a ship was hit
 
-  game.fleet.ships.forEach(ship => {
+  for (let i = 0; i < game.fleet.ships.length; i++) {
+    let ship = game.fleet.ships[i];
     if (ship.position === playerInput) {
       if (!ship.hit) { // check if the ship has already been hit
-        hitShip = true;
+        doDamage = true;
         ship.hit = true;
         game.fleet.totalHealth--;
         if (game.fleet.totalHealth > 1) {
@@ -111,24 +100,25 @@ function playGame(game) {
           console.log(`Hit. You have sunk a battleship. 1 ship remaining.`);
         }
       } else {
-        hitShip = true;
+        doDamage = true;
         console.log(`You have already picked this location. Miss!`);
       }
+      break;
     }
-  });
+  }
 
-  if (!hitShip) {
+  if (!doDamage) {
     console.log(`You have missed!`);
   }
 }
 
 
-
 // *** RUN THE GAME ***
+
 
 while (true) {
   startGame();
-  const game = new Game(3, 3, 2, 1);
+  const game = new Game(3, 2, 1);
   while (game.fleet.totalHealth > 0) {
     playGame(game); // Pass the game instance as an argument
   }
