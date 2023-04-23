@@ -24,39 +24,26 @@
 
 var rs = require('readline-sync');
 
-function startGame() {
-  rs.keyIn('Press any key to start the game. ',
-    {hideEchoBack:true,mask:""}
-  );
-  const game = new Game(gameSettings);
-  //console.log(game.fleet.ships);
-  console.log(setupGame(game));
-  let fleetHealth = game.fleet.totalHealth;
-  while (fleetHealth > 0) {
-    playGame(game);
-    fleetHealth = game.fleet.totalHealth; 
-  }
-}
-
-function createGameBoard(size) {
-  return Array.from({ length: size }, (_, row) =>
-    Array.from({ length: size }, (_, col) => `${String.fromCharCode(65 + row)}${col + 1}`)
-  );
-}
+/// *** GAME CLASSES *** ---------------------------------------------------
 
 class Game {
   constructor(gameSettings) {
     this.gameSettings = gameSettings;
-    this.gameBoard = new createGameBoard(gameSettings.boardSize);
-    this.managedGameBoard = new createGameBoard(gameSettings.boardSize);
+    this.board = this.createBoard();
     this.fleet = new Fleet(gameSettings, this);
 
     for (let i = 0; i < gameSettings.numShips; i++) {
-      const shipType = gameSettings.shipsByType[i];
-      this.fleet.addShip(Object.keys(shipType)[0]);
+      const shipType = gameSettings.availableShips[i];
+      this.fleet.addShip(shipType.type);
     }
-
+    
     this.guesses = [];
+  }
+
+  createBoard() {
+    return Array.from({ length: this.gameSettings.boardSize }, (_, row) =>
+      Array.from({ length: this.gameSettings.boardSize }, (_, col) => `${String.fromCharCode(65 + row)}${col + 1}`)
+    );
   }
 
   playerTurn(playerInput) {
@@ -105,63 +92,22 @@ class Game {
 
 class Ship {
   constructor(length, game) {
-    this.startPosition = this.getRandomStartTile(game.gameBoard);
     this.hit = false;
     this.size = length;
     this.occupiedTiles = [];
   }
-
-  getRandomStartTile(gameBoard) {
-    const oceanArray = gameBoard;
-    const randomSubArrayIndex = Math.floor(Math.random() * oceanArray.length);
-    const randomElementIndex = Math.floor(Math.random() * oceanArray[randomSubArrayIndex].length);
-    let randomTile = oceanArray[randomSubArrayIndex][randomElementIndex];
-    oceanArray[randomSubArrayIndex].splice(randomElementIndex, 1);
-    return randomTile;
-  }
-
-  placeShip(game) {
-  const board = game.gameBoard;
-  const [x, y] = this.startPosition;
-  const direction = this.direction;
-  const length = this.size;
-
-  // Check if the ship can be placed in the given direction starting from the start position
-  for (let i = 0; i < length; i++) {
-    const [dx, dy] = direction === 'horizontal' ? [i, 0] : [0, i];
-    const tx = x + dx;
-    const ty = y + dy;
-    if (!board.isValidTile(tx, ty) || board.isOccupiedTile(tx, ty)) {
-      // If the ship cannot be placed in the current direction, reset its starting position and direction
-      this.resetStartPosition();
-      this.resetDirection();
-      return false;
-    }
-  }
-
-  // If the ship can be placed, update the occupied tiles on the board and the ship
-  for (let i = 0; i < length; i++) {
-    const [dx, dy] = direction === 'horizontal' ? [i, 0] : [0, i];
-    const tx = x + dx;
-    const ty = y + dy;
-    board.setOccupiedTile(tx, ty, true);
-    this.occupiedTiles.push([tx, ty]);
-  }
-  return true;
-}
 }
 
 class Fleet {
-  constructor(gameSettings, game) {
+  constructor(gameSettings) {
     this.ships = [];
     this.totalHealth = 0;
-    this.game = game;
     this.numShips = gameSettings.numShips;
-    this.availableShipTypes = gameSettings.availableShipTypes;
+    this.availableShips = gameSettings.availableShips;
   }
 
   addShip(shipType) {
-    const { length } = this.availableShipTypes[shipType];
+    const { length } = this.availableShips.find(s => s.type === shipType);
     const ship = new Ship(length, this.game);
     this.ships.push(ship);
     this.totalHealth += length;
@@ -184,8 +130,9 @@ class Fleet {
   }
 }
 
+/// *** GAME FUNCTIONS *** ---------------------------------------------------
+
 function setupGame(game) {
-  let board = game.managedGameBoard;
   let boardSize = game.gameSettings.boardSize;
   let ships = game.fleet.ships;
 
@@ -200,14 +147,14 @@ function setupGame(game) {
     }
   }
 
-  //console.log(tiles);
+  console.log(tiles);
 
   ships.forEach(ship => {
-      ship.placeShip(game);
+      console.log('Add ship to board...');
     });
 }
 
-function playGame(game) {
+function gameLoop(game) {
   while (!game.isGameOver()) {
     let playerInput = rs.question("Enter a location to strike i.e. 'A2': ", {
       limit: /^[a-jA-J]([0-9]|10)$/,
@@ -228,27 +175,41 @@ function playGame(game) {
   }
 }
 
-// *** SET UP GAME ***
+function playGame() {
+  rs.keyIn('Press any key to start the game. ',
+    {hideEchoBack:true,mask:""}
+  );
 
-const gameSettings = {
-  numShips: 5, // total number of ships in the fleet
-  shipsByType: [
-    {1: 1}, // destroyers: number of
-    {2: 1}, // submarines: number of
-    {3: 1}, // cruisers: number of
-    {4: 1}, // battleships: number of
-    {5: 1}, // carriers: number of
-  ],
-  boardSize: 10,
-  availableShipTypes: {
-  1: {shipType: 'Destroyer', length: 2},
-  2: {shipType: 'Submarine', length: 3},
-  3: {shipType: 'Cruiser', length: 3},
-  4: {shipType: 'Battleship', length: 4},
-  5: {shipType: 'Carrier', length: 5},
+  const gameSettings = {
+    boardSize: 10,
+    availableShips: [
+      {type: 'Destroyer', length: 2, amount: 1},
+      {type: 'Submarine', length: 3, amount: 1},
+      {type: 'Cruiser', length: 3, amount: 1},
+      {type: 'Battleship', length: 4, amount: 1},
+      {type: 'Carrier', length: 5, amount: 1},
+    ],
+    numShips: 0,
+  };
+
+  gameSettings.numShips = Object.values(gameSettings.availableShips).reduce((acc, ship) => {
+    return acc + ship.amount;
+  }, 0);
+
+  const game = new Game(gameSettings);
+
+  //console.log(game.board);
+  //console.log(game.fleet);
+
+  setupGame(game);
+  //console.log(setupGame(game));
+  let fleetHealth = game.fleet.totalHealth;
+  while (fleetHealth > 0) {
+    gameLoop(game);
+    fleetHealth = game.fleet.totalHealth; 
   }
-};
+}
 
-// *** RUN THE GAME ***
+// *** RUN THE GAME ***  ---------------------------------------------------
 
-  startGame();
+  playGame();
