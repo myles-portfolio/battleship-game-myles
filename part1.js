@@ -11,7 +11,7 @@ class Game {
     this.inputHistory = [];
   }
 
-  takeTurn(playerInput) { // flag to check if a ship was hit
+  takeTurn(playerInput) {
     playerInput = playerInput.toUpperCase();
     let healthRemaining = this.fleet.ships.length;
     let hitShip = false;
@@ -35,7 +35,7 @@ class Game {
           console.log(`Hit. You have sunk all battleships!`);
         }
         
-        break; // exit loop once a ship has been hit
+        break;
       }
       
       if (this.inputHistory.includes(playerInput)) {
