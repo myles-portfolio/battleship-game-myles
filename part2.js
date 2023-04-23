@@ -1,27 +1,3 @@
-// *** CURRENT TASKS ***
-
-// TODO Keep in mind that your code cannot place two ships on intersecting paths
-// TODO Ship placement should be random (horizontally and vertically placed) and not manually placed by you in the code
-// TODO Ships must be placed within the grid boundaries
-
-// TODO If the ship does not overlap with any existing ships, update the position key of the ship object to include all the tiles that the ship will occupy on the board.
-
-  // TODO If the ship does overlap with an existing ship or does not fit within the boundaries of the board, generate a new random starting position for the ship and repeat the process from step 2.
-
-//-----------------------------------------------------------------------------
-// *** FUTURE TASKS ***
-
-
-  // TODO Check if the ship can fit within the boundaries of the board from its starting position. For example, if the ship is of length 4 and its starting position is [2, 5], then you should check if there are 4 tiles horizontally or vertically from this position on the board.
-
-  // TODO If the ship fits within the boundaries of the board, check if it overlaps with any existing ships on the board. You can do this by checking if any of the tiles that the ship will occupy are already occupied by another ship.
-
-  // TODO Setup a more robust player prompt for hit event, as once longer ships are added to the game board, the player may not always sink the ship.
-
-  //get the ship's length and starting position
-  //check tiles up, down, left and right of starting position
-  //in first direction that has enough open tiles for ship's, push those tiles to the ship's occupiedTiles array
-
 var rs = require('readline-sync');
 
 /// *** GAME CLASSES *** ---------------------------------------------------
@@ -29,8 +5,9 @@ var rs = require('readline-sync');
 class Game {
   constructor(gameSettings) {
     this.gameSettings = gameSettings;
-    this.board = this.createBoard();
+    this.board = this.createBoard(); //this will be used for GUI in the future
     this.fleet = new Fleet(gameSettings, this);
+    this.tiles = this.createTiles();
 
     for (let i = 0; i < gameSettings.numShips; i++) {
       const shipType = gameSettings.availableShips[i];
@@ -38,6 +15,7 @@ class Game {
     }
     
     this.guesses = [];
+    this.numOfGuessByPlayer = 0;
   }
 
   createBoard() {
@@ -46,47 +24,22 @@ class Game {
     );
   }
 
-  playerTurn(playerInput) {
-    playerInput = playerInput.toUpperCase();
-    let healthRemaining = this.fleet.ships.length;
-    let hitShip = false;
-
-    for (let i = 0; i < healthRemaining; i++) {
-      let ship = this.fleet.ships[i];
-
-      if (ship.position === playerInput) {
-        if (ship.hit) {
-          console.log(`You have already sunk this battleship!`);
-          return;
-        }
-
-        ship.hit = true;
-        this.fleet.totalHealth--;
-        hitShip = true;
-
-        if (this.fleet.totalHealth > 0) {
-          console.log(`Hit. You have sunk a battleship. ${this.fleet.totalHealth} ships remaining.`);
-        } else {
-          console.log(`Hit. You have sunk all battleships!`);
-        }
-
-        break; // exit loop once a ship has been hit
-      }
-    }
-
-    if (!hitShip) {
-      if (this.guesses.includes(playerInput)) {
-        console.log(`You have already picked this location. Miss!`);
-        return;
-      }
-
-      console.log(`You have missed!`);
-      this.guesses.push(playerInput);
-    }
-  }
-
   isGameOver() {
     return this.fleet.totalHealth === 0;
+  }
+
+  createTiles() {
+    let tiles = {};
+    for (let i = 0; i < this.gameSettings.boardSize; i++) {
+      for (let j = 0; j < this.gameSettings.boardSize; j++) {
+        let tile = {
+          tileName: String.fromCharCode(65 + i) + (j + 1),
+          occupiedTile: false,
+        };
+        tiles[tile.tileName] = tile;
+      }
+    }
+    return tiles; 
   }
 }
 
@@ -94,6 +47,8 @@ class Ship {
   constructor(length, game) {
     this.hit = false;
     this.size = length;
+    this.health = this.size;
+    this.isPlaced = false;
     this.occupiedTiles = [];
   }
 }
@@ -101,8 +56,8 @@ class Ship {
 class Fleet {
   constructor(gameSettings) {
     this.ships = [];
-    this.totalHealth = 0;
     this.numShips = gameSettings.numShips;
+    this.totalHealth = gameSettings.numShips;
     this.availableShips = gameSettings.availableShips;
   }
 
@@ -110,23 +65,10 @@ class Fleet {
     const { length } = this.availableShips.find(s => s.type === shipType);
     const ship = new Ship(length, this.game);
     this.ships.push(ship);
-    this.totalHealth += length;
   }
 
-  removeShip(ship) {
-    const index = this.ships.indexOf(ship);
-    if (index !== -1) {
-      this.ships.splice(index, 1);
-      this.totalHealth -= ship.size;
-    }
-  }
-
-  getShip(index) {
-    return this.ships[index];
-  }
-
-  getShips() {
-    return this.ships;
+  getShipByTile(tile) {
+    return this.ships.find(ship => ship.occupiedTiles.includes(tile));
   }
 }
 
@@ -135,23 +77,97 @@ class Fleet {
 function setupGame(game) {
   let boardSize = game.gameSettings.boardSize;
   let ships = game.fleet.ships;
+  let tiles = game.tiles;
 
-  let tiles = {};
-  for (let i = 0; i < boardSize; i++) {
-    for (let j = 0; j < boardSize; j++) {
-      let tile = {
-        tileName: String.fromCharCode(65 + i) + (j + 1),
-        occupiedTile: false,
-      };
-      tiles[tile.tileName] = tile;
+  function canPlaceShip(ship, startingTile, direction) {
+    let row = startingTile.charCodeAt(0) - 65;
+    let col = parseInt(startingTile.substr(1)) - 1;
+
+    for (let i = 0; i < ship.size; i++) {
+      let currentTile;
+      if (direction === 'horizontal') {
+        currentTile = String.fromCharCode(65 + row) + (col + i + 1);
+      } else {
+        currentTile = String.fromCharCode(65 + row + i) + (col + 1);
+      }
+
+      if (!tiles[currentTile] || tiles[currentTile].occupiedTile) {
+        return false;
+      }
     }
+
+    return true;
   }
 
-  console.log(tiles);
-
   ships.forEach(ship => {
-      console.log('Add ship to board...');
-    });
+    while (!ship.isPlaced) {
+      let length = ship.size;
+
+      let row = Math.floor(Math.random() * boardSize);
+      let col = Math.floor(Math.random() * boardSize);
+      let startingTile = String.fromCharCode(65 + row) + (col + 1);
+
+      let directions = ['horizontal', 'vertical'];
+      let directionIndex = Math.floor(Math.random() * directions.length);
+      let direction = directions[directionIndex];
+
+      let canBePlaced = canPlaceShip(ship, startingTile, direction);
+
+      if (canBePlaced) {
+        for (let i = 0; i < length; i++) {
+          let currentTile;
+          if (direction === 'horizontal') {
+            currentTile = String.fromCharCode(65 + row) + (col + i + 1);
+          } else {
+            currentTile = String.fromCharCode(65 + row + i) + (col + 1);
+          }
+
+          ship.occupiedTiles.push(currentTile);
+          tiles[currentTile].occupiedTile = true;
+        }
+        ship.isPlaced = true;
+      }
+    }
+  });
+}
+
+function playerTurn(playerInput, game) {
+  playerInput = playerInput.toUpperCase();
+  let tiles = game.tiles;
+
+  if (game.guesses.includes(playerInput)) {
+    console.log("You have already picked this location. Miss!");
+    return;
+  }
+
+  game.guesses.push(playerInput);
+  game.numOfGuessByPlayer += 1; //this is for future development of an accuracy rating
+
+  if (tiles[playerInput] && tiles[playerInput].occupiedTile) {
+    const ship = game.fleet.getShipByTile(playerInput);
+    if (ship.health > 1) {
+      ship.health--;
+      console.log("Hit!");
+    }
+    else if (ship.health === 1) {
+      ship.health--;
+      if (game.fleet.totalHealth > 1) {
+        game.fleet.totalHealth--;
+        game.fleet.numShips--;
+        const shipsRemaining = game.fleet.numShips === 1 ? 'ship' : 'ships';
+        console.log(`Hit! You have sunk a battleship. ${
+            game.fleet.numShips
+          } ${shipsRemaining} remaining.`);
+      }
+      else {
+        game.fleet.totalHealth--;
+        console.log("Hit. You have sunk all battleships!");
+        return;
+      }
+    }
+  } else {
+    console.log("Miss!");
+  }
 }
 
 function gameLoop(game) {
@@ -160,8 +176,7 @@ function gameLoop(game) {
       limit: /^[a-jA-J]([0-9]|10)$/,
       limitMessage: 'Sorry, $<lastInput> is not allowed.'
     });
-
-    game.playerTurn(playerInput);
+    playerTurn(playerInput, game);
   }
 
   const repeat = rs.keyInYN('Would you like to play again? ');
@@ -198,11 +213,8 @@ function playGame() {
 
   const game = new Game(gameSettings);
 
-  //console.log(game.board);
-  //console.log(game.fleet);
-
   setupGame(game);
-  //console.log(setupGame(game));
+  console.log(game.fleet.ships);
   let fleetHealth = game.fleet.totalHealth;
   while (fleetHealth > 0) {
     gameLoop(game);
