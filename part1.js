@@ -1,17 +1,5 @@
 var rs = require('readline-sync');
 
-function startGame() {
-  rs.keyIn('Press any key to start the game. ',
-    {hideEchoBack:true,mask:""}
-  );
-}
-
-function createGameBoard(size) {
-  return Array.from({ length: size }, (_, row) =>
-    Array.from({ length: size }, (_, col) => `${String.fromCharCode(65 + row)}${col + 1}`)
-  );
-}
-
 class Game {
   constructor(size, numShips, shipLength) {
     this.gameBoard = createGameBoard(size);
@@ -92,22 +80,18 @@ class Fleet {
     this.ships.push(ship);
     this.totalHealth += length;
   }
+}
 
-  removeShip(ship) {
-    const index = this.ships.indexOf(ship);
-    if (index !== -1) {
-      this.ships.splice(index, 1);
-      this.totalHealth -= ship.size;
-    }
-  }
+function startGame() {
+  rs.keyIn('Press any key to start the game. ',
+    {hideEchoBack:true,mask:""}
+  );
+}
 
-  getShip(index) {
-    return this.ships[index];
-  }
-
-  getShips() {
-    return this.ships;
-  }
+function createGameBoard(size) {
+  return Array.from({ length: size }, (_, row) =>
+    Array.from({ length: size }, (_, col) => `${String.fromCharCode(65 + row)}${col + 1}`)
+  );
 }
 
 function playGame(game) {
@@ -131,9 +115,7 @@ function playGame(game) {
   }
 }
 
-
 // *** RUN THE GAME ***
-
 
 while (true) {
   startGame();
