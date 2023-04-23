@@ -200,12 +200,11 @@ function setupGame(game) {
     }
   }
 
-  console.log(tiles);
+  //console.log(tiles);
 
   ships.forEach(ship => {
-    let length = ship.size;
-    let startPos = ship.startPosition;
-  });
+      ship.placeShip(game);
+    });
 }
 
 function playGame(game) {
