@@ -186,9 +186,21 @@ class Fleet {
 
 function setupGame(game) {
   let board = game.managedGameBoard;
+  let boardSize = game.gameSettings.boardSize;
   let ships = game.fleet.ships;
 
-  console.log(board);
+  let tiles = {};
+  for (let i = 0; i < boardSize; i++) {
+    for (let j = 0; j < boardSize; j++) {
+      let tile = {
+        tileName: String.fromCharCode(65 + i) + (j + 1),
+        occupiedTile: false,
+      };
+      tiles[tile.tileName] = tile;
+    }
+  }
+
+  console.log(tiles);
 
   ships.forEach(ship => {
     let length = ship.size;
