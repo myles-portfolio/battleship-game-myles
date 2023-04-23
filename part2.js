@@ -3,7 +3,6 @@
 // TODO Keep in mind that your code cannot place two ships on intersecting paths
 // TODO Ship placement should be random (horizontally and vertically placed) and not manually placed by you in the code
 // TODO Ships must be placed within the grid boundaries
-// TODO The game works as before, except now, all ships must be destroyed to win
 
 // TODO If the ship does not overlap with any existing ships, update the position key of the ship object to include all the tiles that the ship will occupy on the board.
 
@@ -19,6 +18,10 @@
 
   // TODO Setup a more robust player prompt for hit event, as once longer ships are added to the game board, the player may not always sink the ship.
 
+  //get the ship's length and starting position
+  //check tiles up, down, left and right of starting position
+  //in first direction that has enough open tiles for ship's, push those tiles to the ship's occupiedTiles array
+
 var rs = require('readline-sync');
 
 function startGame() {
@@ -26,7 +29,8 @@ function startGame() {
     {hideEchoBack:true,mask:""}
   );
   const game = new Game(gameSettings);
-  console.log(game.fleet);
+  //console.log(game.fleet.ships);
+  console.log(setupGame(game));
   let fleetHealth = game.fleet.totalHealth;
   while (fleetHealth > 0) {
     playGame(game);
@@ -41,10 +45,17 @@ function createGameBoard(size) {
 }
 
 class Game {
-  constructor() {
+  constructor(gameSettings) {
+    this.gameSettings = gameSettings;
     this.gameBoard = new createGameBoard(gameSettings.boardSize);
+    this.managedGameBoard = new createGameBoard(gameSettings.boardSize);
     this.fleet = new Fleet(gameSettings, this);
-    this.numShips = gameSettings.numShips;
+
+    for (let i = 0; i < gameSettings.numShips; i++) {
+      const shipType = gameSettings.shipsByType[i];
+      this.fleet.addShip(Object.keys(shipType)[0]);
+    }
+
     this.guesses = [];
   }
 
@@ -93,28 +104,15 @@ class Game {
 }
 
 class Ship {
-  constructor(length, randomTile) {
-    this.position = randomTile;
+  constructor(length, game) {
+    this.startPosition = this.getRandomStartTile(game.gameBoard);
     this.hit = false;
     this.size = length;
-  }
-}
-
-class Fleet {
-  constructor(gameSettings, game) {
-    this.ships = [];
-    this.totalHealth = 0;
-    this.game = game;
-    for (let shipType of gameSettings.shipsByType) {
-      const enlistShip = gameSettings.availableShipTypes[Object.keys(shipType)[0]];
-      for (let i = 0; i < shipType[Object.keys(shipType)[0]]; i++) {
-        this.ships.push(new Ship(enlistShip.length, this.getRandomTile()));
-      }
-    }
+    this.occupiedTiles = [];
   }
 
-  getRandomTile() {
-    const oceanArray = this.game.gameBoard;
+  getRandomStartTile(gameBoard) {
+    const oceanArray = gameBoard;
     const randomSubArrayIndex = Math.floor(Math.random() * oceanArray.length);
     const randomElementIndex = Math.floor(Math.random() * oceanArray[randomSubArrayIndex].length);
     let randomTile = oceanArray[randomSubArrayIndex][randomElementIndex];
@@ -122,38 +120,51 @@ class Fleet {
     return randomTile;
   }
 
-  addShip(shipType) {
-    const { length } = availableShipTypes[shipType];
-    const ship = new Ship(length, this.getRandomTile());
-    this.ships.push(ship);
-    this.totalHealth += length;
+  placeShip(game) {
+  const board = game.gameBoard;
+  const [x, y] = this.startPosition;
+  const direction = this.direction;
+  const length = this.size;
+
+  // Check if the ship can be placed in the given direction starting from the start position
+  for (let i = 0; i < length; i++) {
+    const [dx, dy] = direction === 'horizontal' ? [i, 0] : [0, i];
+    const tx = x + dx;
+    const ty = y + dy;
+    if (!board.isValidTile(tx, ty) || board.isOccupiedTile(tx, ty)) {
+      // If the ship cannot be placed in the current direction, reset its starting position and direction
+      this.resetStartPosition();
+      this.resetDirection();
+      return false;
+    }
   }
 
-  placeShips(board) {
-    for (const ship of this.ships) {
-      const { size } = ship;
-      let isValidPosition = false;
-      let positions = [];
+  // If the ship can be placed, update the occupied tiles on the board and the ship
+  for (let i = 0; i < length; i++) {
+    const [dx, dy] = direction === 'horizontal' ? [i, 0] : [0, i];
+    const tx = x + dx;
+    const ty = y + dy;
+    board.setOccupiedTile(tx, ty, true);
+    this.occupiedTiles.push([tx, ty]);
+  }
+  return true;
+}
+}
 
-      while (!isValidPosition) {
-        const startRow = Math.floor(Math.random() * board.grid.length);
-        const startCol = Math.floor(Math.random() * board.grid[0].length);
-        const orientation = Math.random() < 0.5 ? 'horizontal' : 'vertical';
-        positions = board.getShipPositions(startRow, startCol, size, orientation);
+class Fleet {
+  constructor(gameSettings, game) {
+    this.ships = [];
+    this.totalHealth = 0;
+    this.game = game;
+    this.numShips = gameSettings.numShips;
+    this.availableShipTypes = gameSettings.availableShipTypes;
+  }
 
-        isValidPosition = positions.every((pos) => {
-          const [row, col] = pos;
-          return board.grid[row][col] === BoardTile.Empty;
-        });
-      }
-
-      for (const pos of positions) {
-        const [row, col] = pos;
-        board.placeShip(row, col, ship);
-      }
-
-      ship.position = positions;
-    }
+  addShip(shipType) {
+    const { length } = this.availableShipTypes[shipType];
+    const ship = new Ship(length, this.game);
+    this.ships.push(ship);
+    this.totalHealth += length;
   }
 
   removeShip(ship) {
@@ -171,6 +182,18 @@ class Fleet {
   getShips() {
     return this.ships;
   }
+}
+
+function setupGame(game) {
+  let board = game.managedGameBoard;
+  let ships = game.fleet.ships;
+
+  console.log(board);
+
+  ships.forEach(ship => {
+    let length = ship.size;
+    let startPos = ship.startPosition;
+  });
 }
 
 function playGame(game) {
