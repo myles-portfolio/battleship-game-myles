@@ -94,6 +94,7 @@ class Ship {
   constructor(length, game) {
     this.hit = false;
     this.size = length;
+    this.isPlaced = false;
     this.occupiedTiles = [];
   }
 }
@@ -147,11 +148,58 @@ function setupGame(game) {
     }
   }
 
-  console.log(tiles);
+  function canPlaceShip(ship, startingTile, direction) {
+    let row = startingTile.charCodeAt(0) - 65;
+    let col = parseInt(startingTile.substr(1)) - 1;
+
+    for (let i = 0; i < ship.size; i++) {
+      let currentTile;
+      if (direction === 'horizontal') {
+        currentTile = String.fromCharCode(65 + row) + (col + i + 1);
+      } else {
+        currentTile = String.fromCharCode(65 + row + i) + (col + 1);
+      }
+
+      if (!tiles[currentTile] || tiles[currentTile].occupiedTile) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 
   ships.forEach(ship => {
-      console.log('Add ship to board...');
-    });
+    while (!ship.isPlaced) {
+      let length = ship.size;
+
+      let row = Math.floor(Math.random() * boardSize);
+      let col = Math.floor(Math.random() * boardSize);
+      let startingTile = String.fromCharCode(65 + row) + (col + 1);
+
+      let directions = ['horizontal', 'vertical'];
+      let directionIndex = Math.floor(Math.random() * directions.length);
+      let direction = directions[directionIndex];
+
+      let canBePlaced = canPlaceShip(ship, startingTile, direction);
+
+      if (canBePlaced) {
+        for (let i = 0; i < length; i++) {
+          let currentTile;
+          if (direction === 'horizontal') {
+            currentTile = String.fromCharCode(65 + row) + (col + i + 1);
+          } else {
+            currentTile = String.fromCharCode(65 + row + i) + (col + 1);
+          }
+
+          ship.occupiedTiles.push(currentTile);
+          tiles[currentTile].occupiedTile = true;
+        }
+        ship.isPlaced = true;
+      }
+    }
+  });
+
+      console.log(tiles);
 }
 
 function gameLoop(game) {
@@ -199,10 +247,11 @@ function playGame() {
   const game = new Game(gameSettings);
 
   //console.log(game.board);
-  //console.log(game.fleet);
+
 
   setupGame(game);
   //console.log(setupGame(game));
+  console.log(game.fleet.ships);
   let fleetHealth = game.fleet.totalHealth;
   while (fleetHealth > 0) {
     gameLoop(game);
