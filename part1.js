@@ -2,13 +2,26 @@ var rs = require('readline-sync');
 
 class Game {
   constructor(size, numShips, shipLength) {
-    this.gameBoard = createGameBoard(size);
+    this.size = size;
+    this.gameBoard = this.createGameBoard();
     this.fleet = new Fleet(numShips, shipLength, this);
     
     for (let i = 0; i < numShips; i++) {
       this.fleet.addShip(shipLength, this);
     }
-    this.inputHistory = [];
+    this.guesses = [];
+  }
+
+  createGameBoard() {
+    return Array.from({ length: this.size }, (_, row) =>
+      Array.from({ length: this.size }, (_, col) => `${String.fromCharCode(65 + row)}${col + 1}`)
+    );
+  }
+
+  startGame() {
+    rs.keyIn('Press any key to start the game. ',
+      {hideEchoBack:true,mask:""}
+    );
   }
 
   takeTurn(playerInput) {
@@ -30,7 +43,7 @@ class Game {
         hitShip = true;
         
         if (this.fleet.totalHealth > 0) {
-          console.log(`Hit. You have sunk a battleship. ${this.fleet.totalHealth} ships remaining.`);
+          console.log(`Hit. You have sunk a battleship. ${this.fleet.totalHealth} ship remaining.`);
         } else {
           console.log(`Hit. You have sunk all battleships!`);
         }
@@ -38,7 +51,7 @@ class Game {
         break;
       }
       
-      if (this.inputHistory.includes(playerInput)) {
+      if (this.guesses.includes(playerInput)) {
         console.log(`You have already picked this location. Miss!`);
         return;
       }
@@ -46,8 +59,18 @@ class Game {
     
     if (!hitShip) {
       console.log(`You have missed!`);
-      this.inputHistory.push(playerInput);
+      this.guesses.push(playerInput);
     }
+  }
+
+  reset(numShips, shipLength) {
+    this.fleet = new Fleet(numShips, shipLength, this);
+
+    for (let i = 0; i < numShips; i++) {
+      this.fleet.addShip(shipLength, this);
+    }
+
+    this.guesses = [];
   }
 }
 
@@ -64,6 +87,8 @@ class Fleet {
     this.ships = [];
     this.totalHealth = 0;
     this.game = game;
+    this.shipSize = shipLength;
+    this.numShips = numShips;
   }
 
   getRandomTile() {
@@ -75,26 +100,20 @@ class Fleet {
     return randomTile;
   }
 
-  addShip(length) {
+  addShip(length, game) {
     const ship = new Ship(length, this.getRandomTile());
     this.ships.push(ship);
-    this.totalHealth += length;
+    game.fleet.totalHealth += length;
+  }
+
+  getShips() {
+    return this.ships.length;
   }
 }
 
-function startGame() {
-  rs.keyIn('Press any key to start the game. ',
-    {hideEchoBack:true,mask:""}
-  );
-}
-
-function createGameBoard(size) {
-  return Array.from({ length: size }, (_, row) =>
-    Array.from({ length: size }, (_, col) => `${String.fromCharCode(65 + row)}${col + 1}`)
-  );
-}
-
 function playGame(game) {
+  let numShips = game.fleet.getShips();
+  let shipLength = game.fleet.shipSize;
   let playerInput = rs.question("Enter a location to strike i.e. 'A2': ", {
       limit: /^[a-cA-C][1-3]$/,
       limitMessage: 'Sorry, $<lastInput> is not allowed.'
@@ -106,8 +125,8 @@ function playGame(game) {
     const repeat = rs.keyInYN('Would you like to play again? ');
 
     if (repeat) {
-      startGame();
-      game.reset();
+      game.startGame();
+      game.reset(numShips, shipLength);
     } else {
       console.log('Thanks for playing!');
       process.exit();
@@ -118,8 +137,8 @@ function playGame(game) {
 // *** RUN THE GAME ***
 
 while (true) {
-  startGame();
   const game = new Game(3, 2, 1);
+  game.startGame();
   let fleetHealth = game.fleet.totalHealth;
   while (fleetHealth > 0) {
     playGame(game);
