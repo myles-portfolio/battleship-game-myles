@@ -74,30 +74,31 @@ class Fleet {
 
 /// *** GAME FUNCTIONS *** ---------------------------------------------------
 
-function setupGame(game) {
+function canPlaceShip(game, ship, startingTile, direction) {
+  let tiles = game.tiles;
+  let row = startingTile.charCodeAt(0) - 65;
+  let col = parseInt(startingTile.substr(1)) - 1;
+
+  for (let i = 0; i < ship.size; i++) {
+    let currentTile;
+    if (direction === 'horizontal') {
+      currentTile = String.fromCharCode(65 + row) + (col + i + 1);
+    } else {
+      currentTile = String.fromCharCode(65 + row + i) + (col + 1);
+    }
+
+    if (!tiles[currentTile] || tiles[currentTile].occupiedTile) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function setupGame(game, canPlaceShip) {
   let boardSize = game.gameSettings.boardSize;
   let ships = game.fleet.ships;
   let tiles = game.tiles;
-
-  function canPlaceShip(ship, startingTile, direction) {
-    let row = startingTile.charCodeAt(0) - 65;
-    let col = parseInt(startingTile.substr(1)) - 1;
-
-    for (let i = 0; i < ship.size; i++) {
-      let currentTile;
-      if (direction === 'horizontal') {
-        currentTile = String.fromCharCode(65 + row) + (col + i + 1);
-      } else {
-        currentTile = String.fromCharCode(65 + row + i) + (col + 1);
-      }
-
-      if (!tiles[currentTile] || tiles[currentTile].occupiedTile) {
-        return false;
-      }
-    }
-
-    return true;
-  }
 
   ships.forEach(ship => {
     while (!ship.isPlaced) {
@@ -111,7 +112,7 @@ function setupGame(game) {
       let directionIndex = Math.floor(Math.random() * directions.length);
       let direction = directions[directionIndex];
 
-      let canBePlaced = canPlaceShip(ship, startingTile, direction);
+      let canBePlaced = canPlaceShip(game, ship, startingTile, direction);
 
       if (canBePlaced) {
         for (let i = 0; i < length; i++) {
@@ -213,7 +214,7 @@ function playGame() {
 
   const game = new Game(gameSettings);
 
-  setupGame(game);
+  setupGame(game, canPlaceShip);
   //console.log(game.fleet.ships); //Uncomment to see where ships are placed on board.
   let fleetHealth = game.fleet.totalHealth;
   while (fleetHealth > 0) {
