@@ -214,7 +214,7 @@ function playGame() {
   const game = new Game(gameSettings);
 
   setupGame(game);
-  console.log(game.fleet.ships);
+  //console.log(game.fleet.ships); //Uncomment to see where ships are placed on board.
   let fleetHealth = game.fleet.totalHealth;
   while (fleetHealth > 0) {
     gameLoop(game);
